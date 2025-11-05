@@ -3,7 +3,15 @@
 This is the writeup markdown file by Aaron Li describing how I executed the project deliverable and the use of
 the files in this CEA Parser directory, leaving as much detail as possible
 
-If you cannot render this on your machine (VSCode), open this repository in 
+If you cannot render this on your machine (VSCode), open this repository in https://github.com/TinFoiKa/CEA-Parser
+
+### Deliverables Executed
+
+- [Task 1 - Fuel v. Performance](#task-1-fuel-type-vs-performance-parameters-ceapy)
+- [Task 2 - Pressure v. Performance](#task-2-chamber-pressure-v-performance-parameters)
+- [Task 3 - O/F v. Performance](#task-3-of-ratio-v-performance-parameters)
+- [Bonus 1 - Thrust Calculation](#bonus-1-thrust-calculations)
+- [Bonus 2 - Graphing w/ two IVs](#bonus-2-graphing-with-two-ivs)
 
 ## Graphics
 
@@ -97,7 +105,7 @@ File produced (and parsed): cea > rvP.txt
 
 This one certainly confused me the most, as I'd heard in the past that the optimal O/F ratio was supposed to be 1.6. However, according to the graph, as O/F decreases, both measures of $c^*$ and $I_{sp}$ increase, in this case producing the highest measure at O/F = 1.1
 
-Yet again, theoretical $C_f$ also seems to still have no effect on the effective performance, leaving me with the question of whether this test produced expected results - where a quick look through the input section of rvP.txt shows no anomalies.
+Yet again, theoretical $C_f$ also seems to still have no effect on the effective performance, leaving me with the question of whether this test produced valid results; a quick look through the input section of rvP.txt shows no anomalies.
 
 Still, I refuse to let my researcher's bias show besides in this seemingly trivial case. The graph still clearly shows that an O/F ratio of 1.1 for chamber pressure 300 psia and a 75/25 Ethanol-water propellant produces the best results out of the given range.
 
@@ -111,38 +119,119 @@ $$
 F = \dot{m} \cdot c^* \cdot C_\tau
 $$ 
 
-Noticing mass flow rate for ideal compressible flows as given by the grc paper to be:
+Notice mass flow rate for ideal compressible flows as given by the [GRC paper](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mass-flow-rate-equations/) is:
 
 $$
  \dot{m} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, M (1+\frac{\gamma-1}{2}M^2)^{-\frac{\gamma+1}{2(\gamma-1)}}
 $$
 
-I'd like to break this apart into more digestible chunks, and link all these convuluted terms to the corresponding values given by the CEA
+I'd like to break this apart into more digestible chunks, and link all these convoluted terms to corresponding ones on the CEA output file (our program specifically looks for displacement from each PERFORMANCE PARAMETERS marker).
+
+The GRC paper gives us the following definitions of the variables, which lets us, using a matching process between the CEA input and output files and the given expression, may help us simplify and define the parameters of the problem
+
+| Variable | Definition         |
+|:--------:| ------------------ |
+| $A$      | Throat Area        |
+| $p_t$    | Total Pressure     |
+| $T_t$    | Total Temp         |
+| $M$      | Mach No.           |
+| $R$      | Gas Constant       |
+| $\gamma$ | Specific Heat Ratio|
+
+I'll link a more specific writeup of how I pulled apart the GRC paper [here](#bonus-1-grc-pullapart)
+
+| Variable | Definition         | CEA Symbol    |
+|:--------:| ------------------ |:-------------:|
+| $p_t$    | Total Pressure     | P             |
+| $T_t$    | Total Temp         | T             |
+| $M$      | Mach No.           | MACH HUMBER = 1|
+| $R$      | Gas Constant       | R             |
+| $\gamma$ | Specific Heat Ratio| GAMMAs        |
+
+Using this to simplify the expression before we put in python code, where the subscript $_t$ denotes throat:
+
+$$
+ \dot{m}_{t} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, (1+\frac{\gamma-1}{2})^{-\frac{\gamma+1}{2(\gamma-1)}}
+$$
+
+I consistently mention in my longer [pullapart](#bonus-1-grc-pullapart) this idea of 'displacements' from the PERFORMANCE PARAMETERS marker. multivar.py wraps the function in parse.py to modify the read function for the values we need on the .txt files, where the displacements are as follows:
+
+| CEA Symbol    | Displacement  |
+|:-------------:|:-------------:|
+| P             |  -16
+| T             |   -15
+| R             |   -20**
+| GAMMAs        |   -4
+
+** This one is difficult to access, whether I create a new condition to start the read from these lines from the header `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR` instead is a consideration I have to make. This also means I have to delete my heuristic jump in the loop to favour a slower but more comprehensive read instead.
+
+Modifying our methods for these thrust is quite easy. The new implementation is an override of the parse.py parser in in multivar.py.
+
+### Implementation
+
+The most basic python code (seen in multivar.py) is as follows
+
+```[python]
+import numpy as np
+
+# Given in deliverable and converted to m^2
+areas = [0.03302, 0.0479044, 0.075184]
+
+# Parse .txt for CEA symbols
+(p, big_t, big_r, gamma) = parse_txt("output.txt")
+
+for a_star in areas:
+    # mdot calculation
+    a = a_star*p/np.sqrt(big_t)
+    b = np.sqrt(gamma/big_r)
+    c = 1 + (gamma-1)/2
+    d = - (gamma + 1)/(2*(gamma-1))
+    mdot = a * b * (np.pow(c,d))
+    
+    # Calculate thrust, send to matplotlib to show 3 graphs for 3 area conditions
+    {...}
+```
+
+Note that the thrust calc (with considerations of 95% efficency) is now
+
+$$
+F = \dot{m}_t \cdot c^* \cdot C_\tau \cdot 0.95^2
+$$
+
+### Results
+
+For cases where $A_t :=[0.03302, 0.0479044, 0.075184]m^2$ 
+
+And Trade 2 (Pressure):
 
 
-In order to do that, I will very brutishly expand our parse_txt method to search back from the PERFORMANCE PARAMETERS marker to search for 
 
-## Bonus 2: Graphing Two IVs
+And Trade 3 (O/F ratio):
 
-It seems one of the more realistic use cases here would be an analysis on O/F ratios and fuel types, as it both gives me a practical challenge and sort of forces me to use the rocketcea library instead of the web app.
+## Bonus 2: Graphing with Two IVs
 
-However I'll also take the advice of the deliverable pdf and also do an analysis on the .txt files provided by the NASA CEA web app on variables chamber pressure and O/F ratio (2 variable parser wrapper included in multivar.py as a modification on the implementation in parse.py)
+It seems one of the more realistic use cases here would be an analysis on O/F ratios and fuel types (1), as it both gives me a practical challenge and sort of forces me to use the rocketcea library instead of the web app.
+
+However I'll also take the advice of the deliverable pdf and also do an analysis on the .txt files provided by the NASA CEA web app on variables chamber pressure and O/F ratio (2) (2 variable parser wrapper included in multivar.py as a modification on the implementation in parse.py)
 
 ### Simplifying Performance
 
-Encapsulating performance is easy - [Bonus 1](#bonus-1-thrust-calculations) shows us that thrust $F$ is a value that can be represented in terms of either $c^*$ and $C_\tau$ or $I_{sp}$ in the following equations (taken from the slides):
+Encapsulating performance is easy - an extension on [Bonus 1](#bonus-1-thrust-calculations) shows us that thrust $F$ is a value that can be represented in terms of either $c^*$ and $C_\tau$ or $I_{sp}$ in the following equations (taken from the slides):
 
 $$
 F = I_{sp} \cdot \dot{m}g
-\newline \\[10pt]
+$$
+$$
 F = \dot{m} \cdot c^* \cdot C_\tau
 $$ 
 
-Simple rearranging shows us that all 3 values are shown in $I_{sp}\cdot g = c^* \cdot C_\tau$. taking, then, $I_{sp}$ as the ultimate simple performance parameter, we can graph a 3-variable relationship taking only $I_{sp}$ as DV. 
+Simple rearranging shows us that all 3 variables are present in the identity $I_{sp}\cdot g = c^* \cdot C_\tau$. taking, then, $I_{sp}$ as the ultimate performance parameter, we can graph a 3-variable relationship taking only $I_{sp}$ as the DV. 
+
+Only reading $I_{sp}$ from the data files created, multivar.py holds two methods that read this singualr DV as a third dimension to, individually, (1) and (2) as laid out in the introduction.
 
 ### The Question of Visualisation
 
-As for visualisation, it's quite evident that the answer is to produce a 3D graph and optimise for the multivariate peak. This isn't difficult statistics, we can still rely on stupid geometric intuition to understand maximums given 3 variables. 
+As for visualisation, it's quite evident that the answer is to produce a 3D graph and optimise for the multivariate peak. This isn't difficult statistics, we can still rely on stupid geometric intuition to understand maximums given 3 variables. The utility of this visualisation is that you answer a square-profile optimisation question (meaning you'd have to run 5 simulations of 5 IVs) in just a single simulation, where the modes are very visually shown to you.
 
 ### Produced graph
 
@@ -159,3 +248,38 @@ This is the graph using the CEA web app modifying Chamber Pressure and O/F Ratio
 ### Extension
 
 I believe the question this approaches is to think of how to graphically represent n-dimensional CEA applications, which led me down a very... cartesian breakdown where I tried to apply methodological doubt to my inclination towards simple cartesian representations. 
+
+## Appendix
+
+### Bonus 1 GRC pullapart
+
+| Variable | Definition         |
+|:--------:| ------------------ |
+| $A$      | Area               | 
+| $p_t$    | Total Pressure     |
+| $T_t$    | Total Temp         |
+| $M$      | Mach No.           |
+| $R$      | Gas Constant       |
+| $\gamma$ | Specific Heat Ratio|
+
+I'll start with the cancellable stuff first, assuming that all data for our specific thrust use case must come from the **throat**, as this is where, according to GRC, $\dot{m}$ is at a maximum
+
+$M$ corresponds with symbol MACH NUMBER, -2 lines displaced from our parser breakpoint. However, as stated by the GRC paper, and corroborated on the CEA ouput, this is a constant $M=1$ at the throat. 
+
+$A$ is total throat Area, which we are given on the deliverable sheet to be a range from $[1.3, 1.886, 2.96]in^2$, which I'll be converting to metric (preserving as many s.f.s as possible) as $[0.03302, 0.0479044, 0.075184]m^2$ 
+
+$R$ is the gas constant of the products coming out of the nozzle, provided in a not-so-convenient location at the top, behind %FUEL. I may have a more complex string parse function to search and handle this value in particular
+
+$\gamma$ corresponds to GAMMAs (throat), -4 displacement from breakpoint.
+
+$p_t$ and $T_t$ are represented by P and T respectively, -16 and -15 respectively. Conveniently, CEA has this put in terms of metric units for us already.
+
+Our final pullapart sheet looks like:
+
+| Variable | Definition         | CEA Symbol    |
+|:--------:| ------------------ |:-------------:|
+| $p_t$    | Total Pressure     | P             |
+| $T_t$    | Total Temp         | T             |
+| $M$      | Mach No.           | MACH HUMBER = 1|
+| $R$      | Gas Constant       | R             |
+| $\gamma$ | Specific Heat Ratio| GAMMAs        |
