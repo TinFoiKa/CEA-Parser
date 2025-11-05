@@ -71,6 +71,8 @@ File produced (and parsed): cea > pvP.txt
 
 ![](figures/Figure_2.png "Pressure v. Performance Graph")
 
+I would also prefer to see this data specifically as a line graph, however this also does work and gets the point across effectively anyways
+
 ### Discussion
 
 Compared to the previous task, there's a much less significant gradient in how the independent variables modify our performance parameters. Still, it's obvious that as chamber pressure increases, so does the effectiveness of the rocket, using both metrics of characteristic velocity $c^*$ and specific impulse $I_{sp}$, with a surprisingly unchanging $C_f$ providing zero effect on the resulting effective velocity.
@@ -104,13 +106,21 @@ Still, I refuse to let my researcher's bias show besides in this seemingly trivi
 Given: 95% efficiency on $c^*$ and $C_\tau$ (from now on replaces $C_f$)
 
 Take function of Thrust $F$ over $c^*$ and $C_\tau$ as
-<center>
 
-$F = \dot{m} \cdot c^* \cdot C_\tau$ 
+$$
+F = \dot{m} \cdot c^* \cdot C_\tau
+$$ 
 
-</center>
+Noticing mass flow rate for ideal compressible flows as given by the grc paper to be:
+
+$$
+ \dot{m} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, M (1+\frac{\gamma-1}{2}M^2)^{-\frac{\gamma+1}{2(\gamma-1)}}
+$$
+
+I'd like to break this apart into more digestible chunks, and link all these convuluted terms to the corresponding values given by the CEA
 
 
+In order to do that, I will very brutishly expand our parse_txt method to search back from the PERFORMANCE PARAMETERS marker to search for 
 
 ## Bonus 2: Graphing Two IVs
 
@@ -122,13 +132,11 @@ However I'll also take the advice of the deliverable pdf and also do an analysis
 
 Encapsulating performance is easy - [Bonus 1](#bonus-1-thrust-calculations) shows us that thrust $F$ is a value that can be represented in terms of either $c^*$ and $C_\tau$ or $I_{sp}$ in the following equations (taken from the slides):
 
-<center>
-
-$F = I_{sp} \cdot \dot{m}g$
-
-$F = \dot{m} \cdot c^* \cdot C_\tau$ 
-
-</center>
+$$
+F = I_{sp} \cdot \dot{m}g
+\newline \\[10pt]
+F = \dot{m} \cdot c^* \cdot C_\tau
+$$ 
 
 Simple rearranging shows us that all 3 values are shown in $I_{sp}\cdot g = c^* \cdot C_\tau$. taking, then, $I_{sp}$ as the ultimate simple performance parameter, we can graph a 3-variable relationship taking only $I_{sp}$ as DV. 
 
