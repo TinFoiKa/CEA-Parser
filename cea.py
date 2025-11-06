@@ -29,17 +29,17 @@ def ethanol_mix(ethanol, water):
             h,cal=-68308.  t(k)=298.15 rho,g/cc = 0.9998
             """
 
+# remember to use these exact names in the types list pls
+add_new_fuel("75/25 eth", ethanol_mix(75, 25))
+add_new_fuel("95/5 eth", ethanol_mix(95, 5))
+add_new_fuel("50/50 eth", ethanol_mix(50,50))
+
 def fuel_task(types: list) -> tuple[list[float], list[float], list[float]]:
     """
     Returns three lists containing c*, C_f, and Isp values respectively
 
     Different from parse.py in that it does not need to be flipped
     """
-
-    # remember to use these in the types list pls
-    add_new_fuel("75/25 eth", ethanol_mix(75, 25))
-    add_new_fuel("95/5 eth", ethanol_mix(95, 5))
-    add_new_fuel("50/50 eth", ethanol_mix(50,50))
 
     cs_results = []
     cf_results = []

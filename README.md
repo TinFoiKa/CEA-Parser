@@ -125,7 +125,7 @@ $$
  \dot{m} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, M (1+\frac{\gamma-1}{2}M^2)^{-\frac{\gamma+1}{2(\gamma-1)}}
 $$
 
-I'd like to break this apart into more digestible chunks, and link all these convoluted terms to corresponding ones on the CEA output file (our program specifically looks for displacement from each PERFORMANCE PARAMETERS marker).
+I'd like to break this apart into more digestible chunks, and link all these convoluted terms to corresponding ones on the CEA output file (our program specifically looks for displacement from each `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR` marker).
 
 The GRC paper gives us the following definitions of the variables, which lets us, using a matching process between the CEA input and output files and the given expression, may help us simplify and define the parameters of the problem
 
@@ -154,22 +154,22 @@ $$
  \dot{m}_{t} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, (1+\frac{\gamma-1}{2})^{-\frac{\gamma+1}{2(\gamma-1)}}
 $$
 
-I consistently mention in my longer [pullapart](#bonus-1-grc-pullapart) this idea of 'displacements' from the PERFORMANCE PARAMETERS marker. multivar.py wraps the function in parse.py to modify the read function for the values we need on the .txt files, where the displacements are as follows:
+I consistently mention in my longer [pullapart](#bonus-1-grc-pullapart) this idea of 'displacements' from the marker `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR`. thrust.py wraps the function in parse.py to modify the read function for the values we need on the .txt files, where the displacements are as follows:
 
 | CEA Symbol    | Displacement  |
 |:-------------:|:-------------:|
-| P             |  -16
-| T             |   -15
-| R             |   -20**
-| GAMMAs        |   -4
+| P             |   15
+| T             |   16
+| R             |   11
+| GAMMAs        |   27
+| CF            |   35
+| CSTAR         |   34
 
-** This one is difficult to access, whether I create a new condition to start the read from these lines from the header `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR` instead is a consideration I have to make. This also means I have to delete my heuristic jump in the loop to favour a slower but more comprehensive read instead.
-
-Modifying our methods for these thrust is quite easy. The new implementation is an override of the parse.py parser in in multivar.py.
+Modifying our methods to encapsulate these thrust parameters is quite easy. The new implementation is an override of the parse.py parser in in thrust.py.
 
 ### Implementation
 
-The most basic python code (seen in multivar.py) is as follows
+The most basic python code (seen in thrust.py) is as follows
 
 ```[python]
 import numpy as np
@@ -247,7 +247,37 @@ This is the graph using the CEA web app modifying Chamber Pressure and O/F Ratio
 
 ### Extension
 
-I believe the question this approaches is to think of how to graphically represent n-dimensional CEA applications, which led me down a very... cartesian breakdown where I tried to apply methodological doubt to my inclination towards simple cartesian representations. 
+I believe the question this approaches is to think of how to graphically represent n-dimensional IV-DV relationships.
+
+Taking visualisation as an extension, still, on cartesian representations, we know that we can map the tuple of n variables, which I will denote with $x_n$, can be mapped to a visually representable idea. For $n=3$, this looks like
+
+$$
+<x_1, x_2, x_3>\, :=\, <width(x), \,height(y), \,depth(z)>
+$$
+
+Raising to $n=4$, hue is also something we recognise very naturally. Simply:
+
+$$
+<x_1, x_2, x_3, x_4>\, :=\, <width(x), \,height(y), \,depth(z), \,colour(red\rightarrow green)>
+$$
+
+For increasingly baroque values of $n$, keeping ourselves on this tuple structure, we can expand this, within reasonable bounds of recognisability, recognising where data can be categorical/discrete (denoted with $^d$ and continuous as $^c$) like in fuel types to be represented as shapes like a diamond or open/closed circle, and including a time dimension that can be scrolled or numerically analysed to optimise for 6 dimensions (Example below shows 4IV<sup>c</sup> + 1IV<sup>d</sup> + 1DV) 
+
+$$
+\begin{pmatrix}
+x_1^c \\ x_2^c \\ x_3^c \\ x_4^c \\ x_5^d \\ x_6^{d/c} 
+\end{pmatrix}
+:=
+\begin{pmatrix}
+width(x) \\ height(y) \\ depth(z) \\ colour(heat) \\ shape([...]) \\ time(t)
+\end{pmatrix}
+$$
+
+Returning to practicality, for 3 and above independent variable dimensions, it's easy to see how the most intelligible graph is that of a scatterplot with shapes and gradients, with the performance parameter DV placed on the z-axis to show a clear peak that has IV vector of, say, <x,y,heat,shape>. 
+
+For a strictly 3 IV relation, the most intelligible assignment for any categorical variable would certainly be the shape characteristic, whilst a 3 continuous variable assignment may be served best with a heat map from red to green to blue.
+
+For 2 IVs, a simple scatter plot is enough.
 
 ## Appendix
 
@@ -264,7 +294,7 @@ I believe the question this approaches is to think of how to graphically represe
 
 I'll start with the cancellable stuff first, assuming that all data for our specific thrust use case must come from the **throat**, as this is where, according to GRC, $\dot{m}$ is at a maximum
 
-$M$ corresponds with symbol MACH NUMBER, -2 lines displaced from our parser breakpoint. However, as stated by the GRC paper, and corroborated on the CEA ouput, this is a constant $M=1$ at the throat. 
+$M$ corresponds with symbol MACH NUMBER, -2 lines displaced from our parser breakpoint `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR`. However, as stated by the GRC paper, and corroborated on the CEA ouput, this is a constant $M=1$ at the throat. 
 
 $A$ is total throat Area, which we are given on the deliverable sheet to be a range from $[1.3, 1.886, 2.96]in^2$, which I'll be converting to metric (preserving as many s.f.s as possible) as $[0.03302, 0.0479044, 0.075184]m^2$ 
 
@@ -283,3 +313,20 @@ Our final pullapart sheet looks like:
 | $M$      | Mach No.           | MACH HUMBER = 1|
 | $R$      | Gas Constant       | R             |
 | $\gamma$ | Specific Heat Ratio| GAMMAs        |
+
+### Graph Type Selector From Abstracted Rules
+
+Establish:
+
+In IVs
+* 4 of any means **scatter plot** (continuity ignored)
+* 3 discrete means **scatter plot** prioritising **shape** over colour
+* 3 continuous means **heat map 3D curve**
+* 2 continuous 1 discrete (xyc $\rightarrow$ ccd, cdc, dcc)
+    * ccd $\rightarrow$ can still stay **heat map 3D curve**
+    * cdc, dcc $\rightarrow$ has **colour gradient**, but **stacked line** graph
+* 1 continous 2 discrete (xyc $\rightarrow$ cdd, ddc, dcd)
+    * cdd, dcd $\rightarrow$ has **colour gradient**, but on **stacked line** graph
+    * ddc $\rightarrow$ is a **scatter** with **colour gradient**
+* 2 continuous means **3D curve**
+* 1 continuous 1 discrete means **stacked line** graph
