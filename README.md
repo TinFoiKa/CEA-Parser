@@ -20,8 +20,10 @@ Before I get into how I executed each individual task, you can see in parse.py t
 To replicate on one's own machine, make sure you have matplotlib installed
 
 ```
-pip install matplotlib
+pip install matplotlib numpy mplcursor
 ```
+
+Note that the project also has numpy and mplcursor (for interactivity) dependencies
 
 I use the pyplot library to generate ALL figures using a single main method in parse.py.
 
@@ -42,7 +44,7 @@ called, very creatively, "rocketcea." (on PyPi)
 For those testing this program on their own machine (note that the API is a numpy dependency, and I will assume you have Fortran support on Mac and MINGW *properly* installed if you are on windows. This should work on a **properly** set up machine.)
 
 ```
-pip install rocketcea numpy
+pip install rocketcea
 ```
 
 Using this, I build cea.py with the documentation at https://rocketcea.readthedocs.io/en/latest/
@@ -50,6 +52,8 @@ Using this, I build cea.py with the documentation at https://rocketcea.readthedo
 This file specifically calls the CEA_Obj to iterate through an array of fuel types (and self-defined mixtures using the add_new_fuel() method) to output the 3 performance parameters in a tuple which is passed into parse.py through an import and function call dependency. Parse.py then generates the figures seen below:
 
 ### Results
+
+GENERAL NOTE: I chose to show all 3 in bar graphs despite the potentially better representation as a line chart for especially chamber pressure and O/F ratios (due to the uncaught "jumps" in variables,) but please at least endure this section, because the [graphs get better](#bonus-2-graphing-with-two-ivs).
 
 IVs: [75/25, 95/5, 50/50 Ethanol, Methane,  Kerosene]
 
@@ -111,12 +115,12 @@ Still, I refuse to let my researcher's bias show besides in this seemingly trivi
 
 ## Bonus 1: Thrust Calculations
 
-Given: 95% efficiency on $c^*$ and $C_\tau$ (from now on replaces $C_f$)
+Given: 95% efficiency on $c^*$ and $C_\tau$ (from now on replaces $C_f$) results in a total $0.95^2$ efficiency
 
 Take function of Thrust $F$ over $c^*$ and $C_\tau$ as
 
 $$
-F = \dot{m} \cdot c^* \cdot C_\tau
+F = \dot{m} \cdot c^* \cdot C_\tau \cdot 0.95^2
 $$ 
 
 Notice mass flow rate for ideal compressible flows as given by the [GRC paper](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mass-flow-rate-equations/) is:
@@ -158,12 +162,12 @@ I consistently mention in my longer [pullapart](#bonus-1-grc-pullapart) this ide
 
 | CEA Symbol    | Displacement  |
 |:-------------:|:-------------:|
-| P             |   15
-| T             |   16
-| R             |   11
-| GAMMAs        |   27
-| CF            |   35
-| CSTAR         |   34
+| P             |   14
+| T             |   15
+| R             |   10
+| GAMMAs        |   26
+| CF            |   34
+| CSTAR         |   33
 
 Modifying our methods to encapsulate these thrust parameters is quite easy. The new implementation is an override of the parse.py parser in in thrust.py.
 
@@ -175,7 +179,8 @@ The most basic python code (seen in thrust.py) is as follows
 import numpy as np
 
 # Given in deliverable and converted to m^2
-areas = [0.03302, 0.0479044, 0.075184]
+isq_msq = 0.00064516
+areas = [1.3*isq_msq, 1.886*isq_msq, 2.96*isq_msq]
 
 # Parse .txt for CEA symbols
 (p, big_t, big_r, gamma) = parse_txt("output.txt")
@@ -204,15 +209,27 @@ For cases where $A_t :=[0.03302, 0.0479044, 0.075184]m^2$
 
 And Trade 2 (Pressure):
 
+![](figures/Figure_4.png)
 
+A quick analysis reveals that the thrust peaks at a pressure of 500 psia and a throat area of ~$19cm^2$ at a value of ~$93.3 kN$
 
 And Trade 3 (O/F ratio):
 
+![](figures/Figure_5.png)
+
+Thrust in this case peaks at the largest throat area of $19.096cm^2$ yet again, and with the largest O/F ratio of 1.7, however this time only reaching $58.8 kN$
+
+Note: these graphs use the self-developed multivariate plotter planned in bonus 2 and implemented in multivar.py
+
 ## Bonus 2: Graphing with Two IVs
+
+You'll notice that I used the implementation I created in this section in Bonus 1, too. But I've preserved (mostly) the section below as a journal for how I approached this implementation:
+
+### The Assignment
 
 It seems one of the more realistic use cases here would be an analysis on O/F ratios and fuel types (1), as it both gives me a practical challenge and sort of forces me to use the rocketcea library instead of the web app.
 
-However I'll also take the advice of the deliverable pdf and also do an analysis on the .txt files provided by the NASA CEA web app on variables chamber pressure and O/F ratio (2) (2 variable parser wrapper included in multivar.py as a modification on the implementation in parse.py)
+However I'll also take the advice of the deliverable pdf and also do an analysis on variables chamber pressure and O/F ratio (2), still using the rocketcea library for ease and because text parsing gets more complex (and I don't want to spend that time) at higher dimensions.
 
 ### Simplifying Performance
 
@@ -231,21 +248,23 @@ Only reading $I_{sp}$ from the data files created, multivar.py holds two methods
 
 ### The Question of Visualisation
 
-As for visualisation, it's quite evident that the answer is to produce a 3D graph and optimise for the multivariate peak. This isn't difficult statistics, we can still rely on stupid geometric intuition to understand maximums given 3 variables. The utility of this visualisation is that you answer a square-profile optimisation question (meaning you'd have to run 5 simulations of 5 IVs) in just a single simulation, where the modes are very visually shown to you.
+As for visualisation, it's quite evident that the answer is to produce a 3D graph and optimise for the multivariate peak. This isn't difficult statistics, we can still rely on stupid geometric intuition to understand maximums given 3 variables. The utility of this visualisation is that you answer a square-profile optimisation question (meaning you'd have to run 3 independent simulations of 3 IVs otherwise) in just a single simulation, where the maxima are very visually shown to you.
 
 ### Produced graph
 
-WE love matplotlib. Yes, WE. This would be very difficult otherwise, here this was frankly trivial and the implementation is also in multivar.py because I have no other ideas for file names.
+This is the graph using self-developed code to show $I_{sp}$ per fuel type and O/F Ratio.
 
-This is the graph using the API and self-developed code to change fuel type and O/F Ratio.
+![](figures/Figure_6.png)
 
-![](figures/)
+This is the graph showing $I_{sp}$ over Chamber Pressure and O/F Ratio:
 
-This is the graph using the CEA web app modifying Chamber Pressure and O/F Ratio v. effective velocity ():
+![](figures/Figure_8.png)
 
-![](figures/)
+The utility of this is incredible. Just with this 2IV implementation (foreshadowing), it saves the headache of trying to compare a whole bunch of 2D graphs side by side, and, as a very clear heuristic, the ONLY value we care for is the maximum. 
 
-### Extension
+Hence, when we extend up to n IVs, no matter how cluttered the graph is, culling down to a capped value (ahem see my section that mirrors [why silksong took so long to develop](#extension-squared-z-level-filtering)) means we can see exactly what parameters we can accept that still meet our thrust requirements.
+
+### Extension up to 5IV implementation (multivar.py)
 
 I believe the question this approaches is to think of how to graphically represent n-dimensional IV-DV relationships.
 
@@ -278,6 +297,21 @@ Returning to practicality, for 3 and above independent variable dimensions, it's
 For a strictly 3 IV relation, the most intelligible assignment for any categorical variable would certainly be the shape characteristic, whilst a 3 continuous variable assignment may be served best with a heat map from red to green to blue.
 
 For 2 IVs, a simple scatter plot is enough.
+
+### The Glorious Result (3IV)
+![](figures/Figure_7.png)
+
+This is an example of a 3 IV - 1 DV graph. I would like to do a 5 IV case, if you see this and are interested, please give me exact lists for all those 5 IVs because I'd love to test this for the most extreme case
+
+## The Cursed Child (5IV)
+
+### Extension Squared: Z-level filtering
+
+If I was given infinite time I would make this the perfect CEA visualiser. However I'd like to work on another deliverable now, and I think just saying where I can take this next is enough.
+
+I said it while commenting on the [produced graph](#produced-graph): filtering out all points beyond a certain Z-value by the will of a slider placed on the side of the interactive pyplot would be the logical next step and frankly quite simple. 
+
+You'll also notice I have a whole ton of TODOs riddled around my code that suggest a max function, amongst other things related to making the plot more interactive and refactoring the code to be more friendly to programmers other than myself. Some include a failed attempt at implementing a hover feature that displays the (n-1) dimensional coordinate of a point. I even wonder if it would be worth shifting to a framework other than pyplot for such features.
 
 ## Appendix
 
@@ -314,7 +348,7 @@ Our final pullapart sheet looks like:
 | $R$      | Gas Constant       | R             |
 | $\gamma$ | Specific Heat Ratio| GAMMAs        |
 
-### Graph Type Selector From Abstracted Rules
+### Graph Type Selector From Abstracted Rules (MISTAKE, but lowk idk I like what I did)
 
 Establish:
 

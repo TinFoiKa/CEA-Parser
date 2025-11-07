@@ -34,9 +34,11 @@ def mdot(a_star, p, big_t, big_r, gamma):
 
     return a * b * (np.pow(c,d))
 
-def thrust_calc(md, c_star, c_tau) -> list[float]:
+def thrust_calc(md, c_star, c_tau) -> float:
     """
     Calculation for F = mdot x c* x C_tau x 0.95^2
+
+    Note: two 95% efficiencies applied on both c_star and c_tau
     """
 
     return md * c_star * c_tau * np.pow(0.95, 2)
@@ -121,8 +123,10 @@ def thrust_task():
     
     # notice that a_star comes from injected data here, not given by CEA
     # TODO: still need to figure out how multivar CEA ouputs are structured
-    a = [0.03302, 0.0479044, 0.075184] # TODO: in^2 to m^2 NOT in to m
+    isq_msq = 0.00064516
+    a = [1.3*isq_msq, 1.886*isq_msq, 2.96*isq_msq] # TODO: in^2 to m^2 NOT in to m
     
+    i = 2
     for vals, pars in zip([pvals, rvals], [ppars, rpars]):
         m_array = []
         
@@ -133,7 +137,8 @@ def thrust_task():
             for a_star in a:
                 fr = mdot(a_star, p, big_t, big_r, gamma)
                 t = thrust_calc(fr, c_star, Cf)
-                d_array.append(t)
+                print(a_star, p, t)
+                d_array.append(t*100)
             
             m_array.append(d_array)
 
@@ -141,10 +146,18 @@ def thrust_task():
         # second axis and pressure/ratio on first
         
         # define layers and push to nd_graph
-        layers = [tuple(['Pressure (psia)' if vals == pvals else 'O/F', False, pars]), 
-                  tuple(['$A_t (m^2)$', False, a]), 
-                  tuple(['Thrust (N)', False, []])]
-        mv.nd_graph(np.array(m_array), layers)
+        layers = [tuple(['$A_{throat} (cm^2)$', False, [x*10000 for x in a]]),
+                  tuple(['Pressure (psia)' if vals == pvals else 'O/F', False, pars]),
+                  tuple(['Thrust (kN)', False, []])]
+        
+        constants = [
+            ['Fuel', "[75/25] Eth"],
+            ['A/A*', 3.65],
+            ['Oxidiser', "LOx"]
+        ]
+
+        mv.nd_graph(np.array(m_array), layers, constants=constants, title = f"$A_t$ & Trade {i}" + " v. $I_{sp}$")
+        i += 1
 
 if __name__ == "__main__":
     thrust_task()

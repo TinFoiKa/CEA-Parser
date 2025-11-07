@@ -17,6 +17,18 @@ pms = {
     "Eps": 3.65
 }
 
+class CEAInputObj:
+    """
+    This should let me pass inputs as an optional parameter to be displayed
+    on graphs like in multivar.py
+    """
+
+    def __init__(self):
+        self.a_star = []
+        self.ox = []
+        self.of = []
+        self.pressure = []
+
 def ethanol_mix(ethanol, water):
     """
     Helper function to return a formatted card_str for the CEA add_new_fuel
@@ -54,9 +66,5 @@ def fuel_task(types: list) -> tuple[list[float], list[float], list[float]]:
         cf_results.append(float(c.get_PambCf(Pc=pms["Pc"], MR=pms["MR"], eps=pms["Eps"])[0]))
         # isp returned properly in seconds
         isp_results.append(float(c.get_Isp(Pc=pms["Pc"], MR=pms["MR"], eps=pms["Eps"])))
-
-    print(cs_results)
-    print(cf_results)
-    print(isp_results)
 
     return cs_results, cf_results, isp_results

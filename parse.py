@@ -130,7 +130,6 @@ def xvp_graph(x_label, iv, results):
     # Adjust layout to prevent label cutoff
     pl.tight_layout()
 
-    # Display the plot
     pl.show()
 
 if __name__ == "__main__":
