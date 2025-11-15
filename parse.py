@@ -139,12 +139,12 @@ if __name__ == "__main__":
               ["75/25 Ethanol", "95/5 Eth.", "50/50 Eth.", "Methane", "Kerosene"],
               c.fuel_task(fuels))
 
-    # graph 2 Chamber Pressure v. Performance
+    # # graph 2 Chamber Pressure v. Performance
     xvp_graph("Chamber Pressure (psia)",
               [500, 400, 200, 150, 100],
               parse_txt("cea/pvP.txt"))
 
-    # graph 3 O/F Ratio v. Performance
+    # # graph 3 O/F Ratio v. Performance
     xvp_graph("O/F Ratio",
               [1.1, 1.2, 1.3, 1.5, 1.6, 1.7],
               parse_txt("cea/rvP.txt"))

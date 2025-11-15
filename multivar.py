@@ -7,12 +7,16 @@ Used for thrust visualisation in bonus 1 and other graphings in bonus 2
 
 import matplotlib.pyplot as pl
 from matplotlib.font_manager import FontProperties
+from matplotlib.patches import Patch
 import numpy as np
 import mplcursors
 
-import cea as c
+from cea import CEA_Obj, pms, get_thrust_res
+
+from thrust import thrust_task
 
 symbols = [".", "^", "2", "s", "+", "p", "*", "x", "d"]
+
 
 # TODO: a lot of this stuff could do with some OOP refactoring but
 # the developer is NOT touching OOP until things actually work
@@ -27,7 +31,7 @@ def max(results: list):
 
     return
 
-def graph4(layers: list[str, bool, list], XYZ, jk, axis):
+def graph4(layers: list[str, bool, list], XYZ, jk, axis, norm):
     """
     This helper function is only for rendering the 4IV layer, as it's used for both
     m_depth == 4 and m_depth == 5 characteristic graphs
@@ -38,12 +42,14 @@ def graph4(layers: list[str, bool, list], XYZ, jk, axis):
 
     j, k = jk
 
-    axis.scatter3D(X, Y, Z, marker=symbols[k], c=layers[3][2][j], 
-                    label=layers[2][2][k], cmap = 'viridis',
+    axis.scatter3D(X, Y, Z, marker=symbols[k], 
+                   c=[layers[3][2][j] for x in range(X.__len__())], 
+                    label='__nolegend__', cmap = 'viridis',
+                    norm = norm,
                     depthshade=False)
     
         
-def nd_graph(tensor: np.array, layers: list[tuple[str, bool, list]], title = "", constants = []) -> None:
+def nd_graph(tensor: np.array, layers: list[tuple[str, bool, list]], title = "", constants = {}) -> None:
     """
     This is the multidimensional visualisation function which takes an n-dimensional
     numpy matrix and serves to flexibly create a pyplot that can visualise 
@@ -85,7 +91,7 @@ def nd_graph(tensor: np.array, layers: list[tuple[str, bool, list]], title = "",
         # I wish i could directly just impl parse.py's xvp_graph here
         # but alas they have entirely different data structures for results fr
         return None
-    
+
     # isolate iv/dv arrays in layers
     iv_arr = layers[:-1]
     dv = layers[-1]
@@ -109,8 +115,6 @@ def nd_graph(tensor: np.array, layers: list[tuple[str, bool, list]], title = "",
     axis.yaxis.pane.fill = False
     axis.zaxis.pane.fill = False
     axis.zaxis.pane.set_linestyle('none')
-
-    
 
     # Meshgrid is stupid as fuck
     x = iv_arr[0][2]
@@ -147,14 +151,34 @@ def nd_graph(tensor: np.array, layers: list[tuple[str, bool, list]], title = "",
         axis.colorbar(label=layers[2][0])
     # omg 4 vars is soooo quirky
     elif m_depth == 4:
+        zs = np.array(layers[3][2])
+        norm = pl.Normalize(zs.min(), zs.max())
+
+        
         # this first unpacking is for the first variable layer
         for j, t in enumerate(tensor):
             # this one peels us into 2D
+            syms_used = []
             for k, m in enumerate(t):
                 Z = np.ravel(m)
-                graph4(tensor, layers, [X,Y,Z], axis)
+                print(X,Y,Z)
+                graph4(layers, [X,Y,Z], [j,k], axis, norm)
+                syms_used.append(symbols[k])
+        
+        # just to appease the legend
+        for k in range(syms_used.__len__()):
+            axis.scatter3D([], [], [], marker = symbols[k], c = 'black',
+                        label = layers[2][2][k],
+                        norm = norm,
+                        depthshade=False)
+        
+        print(syms_used, layers[2][2])
+        Patch()
 
-        axis.colorbar(label=layers[2][0])
+        # legends???
+        fig.colorbar(pl.cm.ScalarMappable(norm = norm, cmap='viridis'), ax=axis, label=layers[3][0], shrink = 0.6)
+        axis.legend(loc='upper center', bbox_to_anchor=(1, 0),
+                    ncol=2, title=layers[2][0])
     # set up the layered scatter for 3 vars
     elif m_depth == 3:
         # decide if we're using a symbol or heat map
@@ -235,10 +259,10 @@ def i2_test_1():
     isp_res = []
 
     for fuel in fuel_types:
-        obj = c.CEA_Obj(oxName=c.pms["Ox"], fuelName=fuel)
+        obj = CEA_Obj(oxName=pms["Ox"], fuelName=fuel)
         of_res = []
         for of in of_ratios:
-            of_res.append(float(obj.get_Isp(Pc=c.pms["Pc"], MR=of, eps=c.pms["Eps"])))
+            of_res.append(float(obj.get_Isp(Pc=pms["Pc"], MR=of, eps=pms["Eps"])))
 
         isp_res.append(of_res)
 
@@ -253,8 +277,8 @@ def i2_test_1():
     
     constants = [
         ["Oxidiser", 'LOx'],
-        ["Pressure (psia)", c.pms["Pc"]],
-        ["A/A*", c.pms["Eps"]]
+        ["Pressure (psia)", pms["Pc"]],
+        ["A/A*", pms["Eps"]]
     ]
 
     nd_graph(tensor, layers, constants=constants)
@@ -268,10 +292,10 @@ def i2_test_2():
     isp_res = []
 
     for p in pressures:
-        obj = c.CEA_Obj(oxName=c.pms["Ox"], fuelName="75/25 eth")
+        obj = CEA_Obj(oxName=pms["Ox"], fuelName="75/25 eth")
         of_res = []
         for of in of_ratios:
-            of_res.append(float(obj.get_Isp(Pc=p, MR=of, eps=c.pms["Eps"])))
+            of_res.append(float(obj.get_Isp(Pc=p, MR=of, eps=pms["Eps"])))
 
         isp_res.append(of_res)
 
@@ -287,7 +311,7 @@ def i2_test_2():
     constants = [
         ["Oxidiser", 'LOx'],
         ["Fuel", "75/25 Ethanol"],
-        ["A/A*", c.pms["Eps"]]
+        ["A/A*", pms["Eps"]]
     ]
 
     nd_graph(tensor, layers, constants=constants)
@@ -303,12 +327,12 @@ def i3_test_1():
     isp_res = []
 
     for fuel in fuel_types:
-        obj = c.CEA_Obj(oxName=c.pms["Ox"], fuelName=fuel)
+        obj = CEA_Obj(oxName=pms["Ox"], fuelName=fuel)
         of_res = []
         for of in of_ratios:
             p_res = []
             for p in pressures:
-                p_res.append(float(obj.get_Isp(Pc=p, MR=of, eps=c.pms["Eps"])))
+                p_res.append(float(obj.get_Isp(Pc=p, MR=of, eps=pms["Eps"])))
 
             of_res.append(p_res)
         isp_res.append(of_res)
@@ -325,10 +349,39 @@ def i3_test_1():
 
     nd_graph(tensor, layers)
 
-def i5_test_1():
-    return
+def i4_test_1():
+    a = [1.3, 1.886, 2.96]
+    ofs = list(x/2 for x in range(1, 5))
+    f = ["75/25 eth", "95/5 eth"]
+    ps = list(range(100, 550, 50))
+
+    ten = np.array(get_thrust_res(ps, ofs, a, f))
+    z_max = np.concatenate(ten).max()
+
+    isq_msq = 0.00064516
+    layers = [
+        tuple(['$A_{throat} (cm^2)$', False, [x*isq_msq*10000 for x in a]]),
+        tuple(['Pressure (psia)', False, ps]),
+        tuple(['Fuel Type', True, f]),
+        tuple(['O/F Ratios', False, ofs]),
+        tuple(['$Thrust (kN)$', False, []])
+    ]
+
+    constants = [
+        ["Oxidiser", 'LOx'],
+        ["Max Thrust", round(z_max, 4)]
+    ]
+
+    print(ten)
+
+    nd_graph(ten, layers, "The Chosen One", constants=constants)
 
 if __name__ == "__main__":
+    i4_test_1()
     i2_test_1()
     i2_test_2()
     i3_test_1()
+
+    for t in thrust_task():
+        nd_graph(t[0], t[1], t[3], t[2])
+    

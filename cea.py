@@ -6,6 +6,7 @@ Trade 1 on the deliverable
 """
 
 from rocketcea.cea_obj import CEA_Obj, add_new_fuel
+from thrust import mdot, thrust_calc, parse_str
 
 MPFT = 0.3048 # constant for converting feet into meters
 
@@ -65,6 +66,43 @@ def fuel_task(types: list) -> tuple[list[float], list[float], list[float]]:
         cs_results.append(float(c.get_Cstar(pms["Pc"], pms["MR"])) * MPFT)
         cf_results.append(float(c.get_PambCf(Pc=pms["Pc"], MR=pms["MR"], eps=pms["Eps"])[0]))
         # isp returned properly in seconds
-        isp_results.append(float(c.get_Isp(Pc=pms["Pc"], MR=pms["MR"], eps=pms["Eps"])))
+        ispVac = c.get_Isp(Pc=pms["Pc"], MR=pms["MR"], eps=pms["Eps"])*9.807
+        isp_results.append(float(c.estimate_Ambient_Isp(Pc=pms["Pc"], MR=pms["MR"], eps=pms["Eps"])[0]))
+        print(ispVac, isp_results)
 
     return cs_results, cf_results, isp_results
+
+def get_thrust_res(pressures, ofs, astars, fuels):
+    eps = 3.65
+
+    mat = []
+    for of in ofs: # colors
+        e = []
+        for fuel in fuels: # symbols
+            c = CEA_Obj(oxName="LOX", fuelName=fuel)
+            d = []
+            for p in pressures: # y axis
+                k = []
+                # txt = c.get_full_cea_output(p, of, eps)
+                con_r = 1545.349 # big boy molar constant in imperial
+                
+                mg = c.get_Throat_MolWt_gamma(p, of, eps)
+                r = con_r/(mg[0])
+
+                gamma = c.get_HeatCapacities(p, of, eps)[1] # at throat
+                p_t = c.get_Throat_PcOvPe(p, of)
+                big_t = c.get_Temperatures(p, of, eps)[1]
+                c_star = c.get_Cstar(p, of)
+                c_tau = c.get_PambCf(14.7, p, of)[0]
+
+                print(c_star, c_tau)
+                
+                for a in astars: # x axis
+                    m = mdot(a, p_t, big_t, r, gamma)
+                    t = thrust_calc(m, c_star, c_tau)
+                    k.append(t)
+                d.append(k)
+            e.append(d)
+        mat.append(e)
+
+    return mat

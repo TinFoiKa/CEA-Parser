@@ -59,7 +59,7 @@ IVs: [75/25, 95/5, 50/50 Ethanol, Methane,  Kerosene]
 
 ![](figures/Figure_1.png "Fuel v. Performance Graph")
 
-*I divide $9.809\,ms^{-2}$ from $I_{sp}$ here to adhere to the standard of keeping specific impulse in units of time
+In a discussion with another prospective member, we noticed that especially for fuels like Ethanol mixtures (self-defined in code using rocketcea frameworks,) both Ivac and Isp would return significantly different values to their cearun web app counterparts. For example 75/25 Ethanol would return $I_{vac}~2670 ms^{-1}$ on our self-run scripts and $~3000 ms^{-1}$ on the cearun web app. For kerosene (RP-1,) however, this difference would be more like $2496-2490$, which could totally be attributed to conversion errors or small differences in computation. This brings up the question: which would be more reliable? Is consistency, then, that we only stick to one system, the way to get around this evident inaccuracy?
 
 ### Discussion
 
@@ -82,6 +82,8 @@ IVs: [500, 400, 200, 150, 100] psia
 File produced (and parsed): cea > pvP.txt
 
 ![](figures/Figure_2.png "Pressure v. Performance Graph")
+
+*I divide $9.809\,ms^{-2}$ from $I_{sp}$ here to adhere to the standard of keeping specific impulse in units of time
 
 I would also prefer to see this data specifically as a line graph, however this also does work and gets the point across effectively anyways
 
@@ -242,7 +244,7 @@ $$
 F = \dot{m} \cdot c^* \cdot C_\tau
 $$ 
 
-Simple rearranging shows us that all 3 variables are present in the identity $I_{sp}\cdot g = c^* \cdot C_\tau$. taking, then, $I_{sp}$ as the ultimate performance parameter, we can graph a 3-variable relationship taking only $I_{sp}$ as the DV. 
+Simple rearranging shows us that all 3 variables are present in the identity $I_{sp}\cdot g = c^* \cdot C_\tau$. taking, then, $I_{sp}$ (which fittingly represents fuel efficiency as the ratio of how much of the force imparted onto the exhaust is 'returned' to the rocket [think Newton's 3rd]) as the ultimate performance parameter, we can graph a 3-variable relationship taking only $I_{sp}$ as the DV. 
 
 Only reading $I_{sp}$ from the data files created, multivar.py holds two methods that read this singualr DV as a third dimension to, individually, (1) and (2) as laid out in the introduction.
 
@@ -260,9 +262,9 @@ This is the graph showing $I_{sp}$ over Chamber Pressure and O/F Ratio:
 
 ![](figures/Figure_8.png)
 
-The utility of this is incredible. Just with this 2IV implementation (foreshadowing), it saves the headache of trying to compare a whole bunch of 2D graphs side by side, and, as a very clear heuristic, the ONLY value we care for is the maximum. 
+The utility of this is incredible. Just with this 2IV implementation (foreshadowing), it saves the headache of trying to compare a whole bunch of 2D graphs side by side, and, as a very clear heuristic, the few values we care for is the maximum. 
 
-Hence, when we extend up to n IVs, no matter how cluttered the graph is, culling down to a capped value (ahem see my section that mirrors [why silksong took so long to develop](#extension-squared-z-level-filtering)) means we can see exactly what parameters we can accept that still meet our thrust requirements.
+Hence, when we extend up to n IVs, no matter how cluttered the graph is, culling down to a capped value (ahem see my section that mirrors [why silksong took so long to develop](#extension-squared-z-value-filtering)) means we can see exactly what parameters we can accept that still meet our thrust requirements.
 
 ### Extension up to 5IV implementation (multivar.py)
 
@@ -298,14 +300,33 @@ For a strictly 3 IV relation, the most intelligible assignment for any categoric
 
 For 2 IVs, a simple scatter plot is enough.
 
-### The Glorious Result (3IV)
+### The PoC (3IV)
 ![](figures/Figure_7.png)
 
-This is an example of a 3 IV - 1 DV graph. I would like to do a 5 IV case, if you see this and are interested, please give me exact lists for all those 5 IVs because I'd love to test this for the most extreme case
+This is an example of a 3 IV - 1 DV graph. In its current state, it's quite difficult to look at. 
 
-## The Cursed Child (5IV)
+### The Slightly Less/More Cursed Child (4IV)
+Taking IVs (courtesy of Adam Kajganic): 
+* Fuel [95/5 Eth, 75/25 Eth]
+* OF [0.5-2] (0.25 interval)
+* Chamber Pressure [100-500psi] (50 interval)
+* $A_{throat}$ [1.3, 1.886, 2.96] in^2
 
-### Extension Squared: Z-level filtering
+And maximising for thrust, we get a graph that is most certainly suspicious.
+
+![](figures/Figure_9.png)
+
+If we ignore the mismatches, which might have to do with conversion, division, or just general parameter errors (frankly just lazy coding at this point), this form of visualisation gives us a very nice full picture. Given extensions like [Z-value filtering](#extension-squared-z-value-filtering), or general QoL/visualisation implementations, I argue that this is actually a decent visualisation.
+
+### Drawbacks of this Visualisation
+
+Adam did bring up a good point against this visualisation. Especially for a case like this, where only 2 fuel types are given, It seems that a more fitting visualisation would be two normalised graphs side-by-side. Indeed, it would look less cluttered and any small bugs in code would likely be easier to catch. Yes, I agree that for someone trying to observe every single datapoint, my organisation seems like a headache. 
+
+Yet for n-IV cases where maybe no variables only have a few values given (which, as I can presume, is quite rare,) this visualisation might actually be more beneficial than multiple side-by-side graphs. 
+
+It's questionable whether the axes are really the most important focus points in this context. While more points means more clutter locally, I presume that only certain bands of thrust/misc. DV values will be at focus for the person this is being presented to. In that case, one set of axes, with points that can be filtered and, for example, hovered over or directly returned as a list to find the exact tuples of inputs that had produced said band of values, means a very easy and interactive visualisation environment that I'd personally find more useful than a figure that may have more axes markings than points. 
+
+### Extension Squared: Z-value Filtering
 
 If I was given infinite time I would make this the perfect CEA visualiser. However I'd like to work on another deliverable now, and I think just saying where I can take this next is enough.
 

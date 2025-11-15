@@ -3,7 +3,6 @@ This is specifically made for bonus 1 - thrust calculations
 """
 
 import numpy as np
-import multivar as mv
 
 # Dict of displacements from the marker
 # COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR
@@ -43,6 +42,55 @@ def thrust_calc(md, c_star, c_tau) -> float:
 
     return md * c_star * c_tau * np.pow(0.95, 2)
 
+def parse_str(string: str) -> list[list[float]]:
+    """
+    This is an alternate of parse_txt that handles strings from API
+    instead of from CEA web app
+    
+    Results list is returned as a list of list for every variable
+    formatted as [R(IV), P, T, gamma, cstar, Cf]
+    """
+
+    results = []
+
+    # line captures
+    reserve = 0
+    pp = []
+
+    for line in string.splitlines():
+        # if key from found (below) is given, iterate reserve lines
+        if reserve > 0:
+            if reserve == 1:
+                results.append(pp)
+                pp=[]
+
+            print(line, reserve)
+            # remember R has different behaviour than all others [48, 57]
+            is_r = reserve == CAPTURE - DISP["R"]
+
+            # preserve cstar and Cf at exit [37, 44]
+            in_perf = reserve in [CAPTURE - DISP["Cf"], CAPTURE - DISP["cstar"]]
+
+            # all other values found at throat [26, 35]
+            r = [48, 57] if is_r else [37, 44] if in_perf else [26,35]
+
+            # with bounds defined, append all
+            if reserve in list(CAPTURE - x for x in DISP.values()):
+                fl = float(line[r[0]:r[1]])
+                pp.append(fl)
+
+            reserve -= 1
+            continue
+        
+
+        if line.find("COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR") != -1:
+            # encapsulate next 40 lines in the loop
+            # (data range is like 53-88, but i'd like to be safe)
+            reserve = CAPTURE
+
+    print(results)
+
+    return results
 
 def parse_txt(file: str) -> list[list[float]]:
     """
@@ -126,7 +174,8 @@ def thrust_task():
     isq_msq = 0.00064516
     a = [1.3*isq_msq, 1.886*isq_msq, 2.96*isq_msq] # TODO: in^2 to m^2 NOT in to m
     
-    i = 2
+    res = []
+    i = 1
     for vals, pars in zip([pvals, rvals], [ppars, rpars]):
         m_array = []
         
@@ -156,8 +205,10 @@ def thrust_task():
             ['Oxidiser', "LOx"]
         ]
 
-        mv.nd_graph(np.array(m_array), layers, constants=constants, title = f"$A_t$ & Trade {i}" + " v. $I_{sp}$")
         i += 1
+        res.append([np.array(m_array), layers, constants, f"$A_t$ & Trade {i}" + " v. Thrust"])
+
+    return res
 
 if __name__ == "__main__":
     thrust_task()
