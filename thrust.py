@@ -129,8 +129,11 @@ def parse_txt(file: str) -> list[list[float]]:
                 # preserve cstar and Cf at exit [37, 44]
                 in_perf = reserve in [CAPTURE - DISP["Cf"], CAPTURE - DISP["cstar"]]
 
+                # two P and T values are found at chamber
+                is_stagnant = reserve in [CAPTURE - DISP["P"], CAPTURE - DISP["T"]]
+
                 # all other values found at throat [26, 35]
-                r = [48, 57] if is_r else [37, 44] if in_perf else [26,35]
+                r = [48, 57] if is_r else [37, 44] if in_perf else [18,26] if is_stagnant else [26,35]
 
                 # with bounds defined, append all
                 if reserve in list(CAPTURE - x for x in DISP.values()):

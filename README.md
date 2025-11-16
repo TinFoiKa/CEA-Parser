@@ -56,10 +56,11 @@ This file specifically calls the CEA_Obj to iterate through an array of fuel typ
 GENERAL NOTE: I chose to show all 3 in bar graphs despite the potentially better representation as a line chart for especially chamber pressure and O/F ratios (due to the uncaught "jumps" in variables,) but please at least endure this section, because the [graphs get better](#bonus-2-graphing-with-two-ivs).
 
 IVs: [75/25, 95/5, 50/50 Ethanol, Methane,  Kerosene]
+Constants: [Chamber: 300psia, O/F: 1.4, Eps: 3.65, Oxidiser: LOX]
 
 ![](figures/Figure_1.png "Fuel v. Performance Graph")
 
-In a discussion with another prospective member, we noticed that especially for fuels like Ethanol mixtures (self-defined in code using rocketcea frameworks,) both Ivac and Isp would return significantly different values to their cearun web app counterparts. For example 75/25 Ethanol would return $I_{vac}~2670 ms^{-1}$ on our self-run scripts and $~3000 ms^{-1}$ on the cearun web app. For kerosene (RP-1,) however, this difference would be more like $2496-2490$, which could totally be attributed to conversion errors or small differences in computation. This brings up the question: which would be more reliable? Is consistency, then, that we only stick to one system, the way to get around this evident inaccuracy?
+In a discussion with another prospective member, we noticed that especially for fuels like Ethanol mixtures (self-defined in code using rocketcea frameworks,) both Ivac and Isp would return significantly different values (given that flow is NOT frozen at the throat nor anywhere else) to their cearun web app counterparts. For example 75/25 Ethanol would return $I_{vac}~2670 ms^{-1}$ on our self-run scripts and $~3000 ms^{-1}$ on the cearun web app. For kerosene (RP-1,) however, this difference would be more like $2496-2490$, which could totally be attributed to conversion errors or small differences in computation. This brings up the question: which would be more reliable? Is consistency, then, that we only stick to one system, the way to get around this evident inaccuracy? 
 
 ### Discussion
 
@@ -78,6 +79,7 @@ Directly using the web app to run through the different independent variables, I
 ### Results
 
 IVs: [500, 400, 200, 150, 100] psia
+Constants: [Fuel: 75/25 Ethanol, O/F: 1.4, Eps: 3.65, Oxidiser: LOX]
 
 File produced (and parsed): cea > pvP.txt
 
@@ -102,6 +104,7 @@ Once again, I directly use the web app and the same parse.py system.
 ### Results
 
 IVs: [1.1, 1.2, 1.3, 1.5, 1.6, 1.7]
+Constants: [Chamber: 300psia, Fuel: 75/25 Ethanol, Eps: 3.65, Oxidiser: LOX]
 
 File produced (and parsed): cea > rvP.txt
 
@@ -128,7 +131,7 @@ $$
 Notice mass flow rate for ideal compressible flows as given by the [GRC paper](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mass-flow-rate-equations/) is:
 
 $$
- \dot{m} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, M (1+\frac{\gamma-1}{2}M^2)^{-\frac{\gamma+1}{2(\gamma-1)}}
+ \dot{m} = \frac{Ap_0}{\sqrt{T_0}} \sqrt{\frac{\gamma}{R}} \, M (1+\frac{\gamma-1}{2}M^2)^{-\frac{\gamma+1}{2(\gamma-1)}}
 $$
 
 I'd like to break this apart into more digestible chunks, and link all these convoluted terms to corresponding ones on the CEA output file (our program specifically looks for displacement from each `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR` marker).
@@ -138,8 +141,8 @@ The GRC paper gives us the following definitions of the variables, which lets us
 | Variable | Definition         |
 |:--------:| ------------------ |
 | $A$      | Throat Area        |
-| $p_t$    | Total Pressure     |
-| $T_t$    | Total Temp         |
+| $p_0$    | Stagnation Pressure     |
+| $T_0$    | Stagnation Temp         |
 | $M$      | Mach No.           |
 | $R$      | Gas Constant       |
 | $\gamma$ | Specific Heat Ratio|
@@ -148,8 +151,8 @@ I'll link a more specific writeup of how I pulled apart the GRC paper [here](#bo
 
 | Variable | Definition         | CEA Symbol    |
 |:--------:| ------------------ |:-------------:|
-| $p_t$    | Total Pressure     | P             |
-| $T_t$    | Total Temp         | T             |
+| $p_0$    | Chamber Pressure     | P             |
+| $T_0$    | Chamber Temp         | T             |
 | $M$      | Mach No.           | MACH HUMBER = 1|
 | $R$      | Gas Constant       | R             |
 | $\gamma$ | Specific Heat Ratio| GAMMAs        |
@@ -157,7 +160,7 @@ I'll link a more specific writeup of how I pulled apart the GRC paper [here](#bo
 Using this to simplify the expression before we put in python code, where the subscript $_t$ denotes throat:
 
 $$
- \dot{m}_{t} = \frac{Ap_t}{\sqrt{T_t}} \sqrt{\frac{\gamma}{R}} \, (1+\frac{\gamma-1}{2})^{-\frac{\gamma+1}{2(\gamma-1)}}
+ \dot{m}_{t} = \frac{Ap_0}{\sqrt{T_0}} \sqrt{\frac{\gamma}{R}} \, (1+\frac{\gamma-1}{2})^{-\frac{\gamma+1}{2(\gamma-1)}}
 $$
 
 I consistently mention in my longer [pullapart](#bonus-1-grc-pullapart) this idea of 'displacements' from the marker `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR`. thrust.py wraps the function in parse.py to modify the read function for the values we need on the .txt files, where the displacements are as follows:
@@ -213,13 +216,13 @@ And Trade 2 (Pressure):
 
 ![](figures/Figure_4.png)
 
-A quick analysis reveals that the thrust peaks at a pressure of 500 psia and a throat area of ~$19cm^2$ at a value of ~$93.3 kN$
+A quick analysis reveals that the thrust peaks at a pressure of 500 psia and a throat area of ~$19cm^2$ at a value of ~$157.3 kN$
 
 And Trade 3 (O/F ratio):
 
 ![](figures/Figure_5.png)
 
-Thrust in this case peaks at the largest throat area of $19.096cm^2$ yet again, and with the largest O/F ratio of 1.7, however this time only reaching $58.8 kN$
+Thrust in this case peaks at the largest throat area of $19.096cm^2$ yet again, and with the largest O/F ratio of 1.7, however this time only reaching $99.1 kN$
 
 Note: these graphs use the self-developed multivariate plotter planned in bonus 2 and implemented in multivar.py
 
@@ -300,7 +303,7 @@ For a strictly 3 IV relation, the most intelligible assignment for any categoric
 
 For 2 IVs, a simple scatter plot is enough.
 
-### The PoC (3IV)
+### The Proof of Concept (3IV)
 ![](figures/Figure_7.png)
 
 This is an example of a 3 IV - 1 DV graph. In its current state, it's quite difficult to look at. 
@@ -316,7 +319,7 @@ And maximising for thrust, we get a graph that is most certainly suspicious.
 
 ![](figures/Figure_9.png)
 
-If we ignore the mismatches, which might have to do with conversion, division, or just general parameter errors (frankly just lazy coding at this point), this form of visualisation gives us a very nice full picture. Given extensions like [Z-value filtering](#extension-squared-z-value-filtering), or general QoL/visualisation implementations, I argue that this is actually a decent visualisation.
+If we ignore the mismatches, which might have to do with conversion, division, or just general parameter order errors, this form of visualisation gives us a very nice view of the data. Given extensions like [Z-value filtering](#extension-squared-z-value-filtering), or general QoL/visualisation implementations, I argue that this is actually a decent visualisation.
 
 ### Drawbacks of this Visualisation
 
@@ -341,23 +344,23 @@ You'll also notice I have a whole ton of TODOs riddled around my code that sugge
 | Variable | Definition         |
 |:--------:| ------------------ |
 | $A$      | Area               | 
-| $p_t$    | Total Pressure     |
-| $T_t$    | Total Temp         |
+| $p_0$    | Total (Stagnation) Pressure     |
+| $T_0$    | Total (Stagnation) Temp         |
 | $M$      | Mach No.           |
 | $R$      | Gas Constant       |
 | $\gamma$ | Specific Heat Ratio|
 
 I'll start with the cancellable stuff first, assuming that all data for our specific thrust use case must come from the **throat**, as this is where, according to GRC, $\dot{m}$ is at a maximum
 
-$M$ corresponds with symbol MACH NUMBER, -2 lines displaced from our parser breakpoint `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR`. However, as stated by the GRC paper, and corroborated on the CEA ouput, this is a constant $M=1$ at the throat. 
+$M$ corresponds with symbol MACH NUMBER, -2 lines displaced from our parser breakpoint `PERFORMANCE PARAMETERS`. However, as stated by the GRC paper, and corroborated on the CEA ouput, this is a constant $M=1$ at the throat. 
 
 $A$ is total throat Area, which we are given on the deliverable sheet to be a range from $[1.3, 1.886, 2.96]in^2$, which I'll be converting to metric (preserving as many s.f.s as possible) as $[0.03302, 0.0479044, 0.075184]m^2$ 
 
-$R$ is the gas constant of the products coming out of the nozzle, provided in a not-so-convenient location at the top, behind %FUEL. I may have a more complex string parse function to search and handle this value in particular
+$R$ is the gas constant of the products coming out of the nozzle, provided in a not-so-convenient location at the top, behind %FUEL. I will have to verify that this stays at a consistent column range in the text file
 
 $\gamma$ corresponds to GAMMAs (throat), -4 displacement from breakpoint.
 
-$p_t$ and $T_t$ are represented by P and T respectively, -16 and -15 respectively. Conveniently, CEA has this put in terms of metric units for us already.
+$p_0$ and $T_0$ are represented by P and T at the chamber respectively (with the assumption from [slide 32](https://docs.google.com/presentation/d/1ZaxBvgIuoSKys6WXRcbw0M6DKwqAs0aF/edit?slide=id.p32#slide=id.p32) that chamber conditions are stagnant), -16 and -15 respectively. Conveniently, CEA has this put in terms of metric units for us already.
 
 Our final pullapart sheet looks like:
 
@@ -369,19 +372,21 @@ Our final pullapart sheet looks like:
 | $R$      | Gas Constant       | R             |
 | $\gamma$ | Specific Heat Ratio| GAMMAs        |
 
+It's also important to note that the negative displacement values are not helpful in telling the code how to iterate through the necessary values, and so I will instead be using the breakpoint nearer to the top: `COMPOSITION DURING EXPANSION FROM INFINITE AREA COMBUSTOR`, so as to maintain that the iteration script can follow the same positive CAPTURE logic without wasting lines for reading.
+
 ### Graph Type Selector From Abstracted Rules (MISTAKE, but lowk idk I like what I did)
 
 Establish:
 
 In IVs
 * 4 of any means **scatter plot** (continuity ignored)
-* 3 discrete means **scatter plot** prioritising **shape** over colour
+* 3 categorical means **scatter plot** prioritising **shape** over colour
 * 3 continuous means **heat map 3D curve**
-* 2 continuous 1 discrete (xyc $\rightarrow$ ccd, cdc, dcc)
+* 2 continuous 1 categorical (d) (xyc $\rightarrow$ ccd, cdc, dcc)
     * ccd $\rightarrow$ can still stay **heat map 3D curve**
     * cdc, dcc $\rightarrow$ has **colour gradient**, but **stacked line** graph
-* 1 continous 2 discrete (xyc $\rightarrow$ cdd, ddc, dcd)
+* 1 continous 2 categorical (xyc $\rightarrow$ cdd, ddc, dcd)
     * cdd, dcd $\rightarrow$ has **colour gradient**, but on **stacked line** graph
     * ddc $\rightarrow$ is a **scatter** with **colour gradient**
 * 2 continuous means **3D curve**
-* 1 continuous 1 discrete means **stacked line** graph
+* 1 continuous 1 categorical means **stacked line** graph
