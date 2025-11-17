@@ -286,13 +286,25 @@ I believe the question this approaches is to think of how to graphically represe
 Taking visualisation as an extension, still, on cartesian representations, we know that we can map the tuple of n variables, which I will denote with $x_n$, can be mapped to a visually representable idea. For $n=3$, this looks like
 
 $$
-<x_1, x_2, x_3>\, :=\, <width(x), \,height(y), \,depth(z)>
+\begin{pmatrix}
+x_1, \\ x_2, \\ x_3
+\end{pmatrix}
+:=
+\begin{pmatrix}
+width(x), \\ height(y), \\ depth(z)
+\end{pmatrix}
 $$
 
 Raising to $n=4$, hue is also something we recognise very naturally. Simply:
 
 $$
-<x_1, x_2, x_3, x_4>\, :=\, <width(x), \,height(y), \,depth(z), \,colour(red\rightarrow green)>
+\begin{pmatrix}
+x_1, \\ x_2, \\ x_3, \\ x_4
+\end{pmatrix}
+:=
+\begin{pmatrix}
+width(x), \\ height(y), \\ depth(z), \\ colour(red\rightarrow green)
+\end{pmatrix}
 $$
 
 For increasingly baroque values of $n$, keeping ourselves on this tuple structure, we can expand this, within reasonable bounds of recognisability, recognising where data can be categorical/discrete (denoted with $^d$ and continuous as $^c$) like in fuel types to be represented as shapes like a diamond or open/closed circle, and including a time dimension that can be scrolled or numerically analysed to optimise for 6 dimensions (Example below shows 4IV<sup>c</sup> + 1IV<sup>d</sup> + 1DV) 
