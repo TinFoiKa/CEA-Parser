@@ -27,6 +27,12 @@ Note that the project also has numpy and mplcursor (for interactivity) dependenc
 
 I use the pyplot library to generate ALL figures using a single main method in parse.py.
 
+## Remark
+
+Much of CEA seems to be observing maxima on graphs and finding the independent variables that caused them. This deliverable will consistently take this method of analysis into consideration, both employing the strategy to make comments on how the independent variables provided impact the dependent variables to evaluate, and using it to generate graphs that can be understood effectively.
+
+This remark also serves to acknowledge that some independent variables, understanding that some parameters like fuel selection are more 'upstream' than parameters like chamber pressure, and hence may or may not affect the dependent variable more drastically than the latter. Simply put, CEA is a  "stepped" process that will eventually provide an answer that is more often than not greater affected by upstream parameters than downstream ones.
+
 ## Task 1: Fuel Type vs. Performance Parameters (cea.py)
 
 The tedious way of solving this problem would be to use the CEA web app to run each fuel case individually with
@@ -216,15 +222,15 @@ And Trade 2 (Pressure):
 
 ![](figures/Figure_4.png)
 
-A quick analysis reveals that the thrust peaks at a pressure of 500 psia and a throat area of ~$19cm^2$ at a value of ~$157.3 kN$
+A quick analysis reveals that the thrust peaks at a pressure of 500 psia and a throat area of ~$19cm^2$ at a value of ~$157.3 kN$. Here, it seems that the greater the throat area, AND the greater the chamber pressure, the greater the thrust. This makes sense intuitively considering how mass exits the nozzle of the rocket
 
 And Trade 3 (O/F ratio):
 
 ![](figures/Figure_5.png)
 
-Thrust in this case peaks at the largest throat area of $19.096cm^2$ yet again, and with the largest O/F ratio of 1.7, however this time only reaching $99.1 kN$
+Thrust in this case peaks at the largest throat area of $19.096cm^2$ yet again, and with the largest O/F ratio of 1.7, however this time only reaching $99.1 kN$. Surprisingly, the bell curve nature of O/F disappears here, each data point almost increasing thrust to similar degrees. It seems that O/F may not be a large factor in evaulating thrust.
 
-Note: these graphs use the self-developed multivariate plotter planned in bonus 2 and implemented in multivar.py
+Note: these graphs use the self-developed multivariate plotter planned in bonus 2 as implemented in multivar.py
 
 ## Bonus 2: Graphing with Two IVs
 
@@ -261,9 +267,13 @@ This is the graph using self-developed code to show $I_{sp}$ per fuel type and O
 
 ![](figures/Figure_6.png)
 
+We can see from the graph that O/F shows its very classic 'bell curve' behaviour, with different maxima for different fuel types. One might be inclined to then increase the O/F data domain, seeing as the maxima for CH4 and Kerosene don't seem to be captured by this test.
+
 This is the graph showing $I_{sp}$ over Chamber Pressure and O/F Ratio:
 
 ![](figures/Figure_8.png)
+
+This graph, yet again, reveals both the very interesting bell curve shape of O/F ratios and the linear shape of changing pressure. Evaluating for the maximum, the very simple conclusion that the higher the pressure for 75/25 ethanol, the better performance (mass efficiency $I_{sp}$) the rocket will see.
 
 The utility of this is incredible. Just with this 2IV implementation (foreshadowing), it saves the headache of trying to compare a whole bunch of 2D graphs side by side, and, as a very clear heuristic, the few values we care for is the maximum. 
 
